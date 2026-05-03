@@ -74,6 +74,19 @@ def refresh():
         thread.start()
     return jsonify({"status": "started"})
 
+# test email endpoint to verify notifier functionality without running the full pipeline
+@app.route("/api/test-email", methods=["POST"])
+def test_email():
+    from notifier import send_email
+    test_jobs = [{
+        "company": "Test Company",
+        "title": "Test Engineer",
+        "location": "Munich",
+        "url": "https://example.com"
+    }]
+    send_email(test_jobs)
+    return jsonify({"status": "attempted"})
+
 if __name__ == "__main__":
     # Load existing results on startup
     previous = load_previous()
