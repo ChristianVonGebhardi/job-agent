@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Agent Dashboard</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, sans-serif; background: #0f1117; color: #e0e0e0; padding: 24px; }
+        h1 { color: #4fc3f7; margin-bottom: 4px; }
+        .meta { color: #666; font-size: 13px; margin-bottom: 24px; }
+        .controls { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
+        .btn { background: #4fc3f7; color: #000; border: none; padding: 10px 24px;
+               border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; }
+        .btn:disabled { background: #333; color: #666; cursor: not-allowed; }
+        .stats { display: flex; gap: 16px; }
+        .stat { background: #1a1d2e; border: 1px solid #2a2d3e; border-radius: 8px;
+                padding: 12px 20px; text-align: center; }
+        .stat-number { font-size: 24px; font-weight: 700; color: #4fc3f7; }
+        .stat-label { font-size: 11px; color: #666; margin-top: 2px; }
+        .status { font-size: 13px; color: #888; min-height: 20px; }
+        .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #333;
+                   border-top-color: #4fc3f7; border-radius: 50%;
+                   animation: spin 0.8s linear infinite;
+                   margin-right: 8px; vertical-align: middle; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .section { margin-top: 24px; }
+        .section h2 { color: #4fc3f7; font-size: 15px; margin-bottom: 12px;
+                      border-bottom: 1px solid #2a2d3e; padding-bottom: 8px; }
+        .job-card { background: #1a1d2e; border: 1px solid #2a2d3e; border-radius: 8px;
+                    padding: 14px 16px; margin-bottom: 8px; }
+        .job-title a { color: #e0e0e0; text-decoration: none; font-weight: 600; font-size: 14px; }
+        .job-title a:hover { color: #4fc3f7; }
+        .job-meta { font-size: 12px; color: #666; margin-top: 4px; }
+        .badge-new { background: #1a472a; color: #4caf50; font-size: 10px;
+                     padding: 2px 6px; border-radius: 4px; margin-left: 8px; }
+        .empty { color: #444; font-style: italic; font-size: 13px; padding: 20px 0; }
+    </style>
+</head>
+<body>
+    <h1>💼 Job Agent Dashboard</h1>
+    <p class="meta">Monitors your target companies daily — new postings only</p>
+
+    <div class="controls">
+        <button class="btn" id="refreshBtn" onclick="startPipeline()">Run Now</button>
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-number" id="newCount">—</div>
+                <div class="stat-label">New Jobs</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number" id="totalCount">—</div>
+                <div class="stat-label">Total Jobs</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number" id="companyCount">—</div>
+                <div class="stat-label">Companies</div>
+            </div>
+        </div>
+    </div>
+    <div class="status" id="statusMsg"></div>
+
+    <div class="section">
+        <h2>🆕 New Since Last Run</h2>
+        <div id="newJobsList"><div class="empty">Run the pipeline to see new jobs.</div></div>
+    </div>
+
+    <script>
+        let polling = null;
+
+        async function startPipeline() {
+            await fetch('/api/refresh', { method: 'POST' });
+            document.getElementById('refreshBtn').disabled = true;
+            document.getElementById('statusMsg').innerHTML =
+                '<span class="spinner"></span>Fetching jobs from all companies...';
+            polling = setInterval(checkStatus, 3000);
+        }
+
+        async function checkStatus() {
+            const res = await fetch('/api/status');
+            const data = await res.json();
+            if (data.status === 'done' || data.status === 'error') {
+                clearInterval(polling);
+                document.getElementById('refreshBtn').disabled = false;
+                document.getElementById('statusMsg').textContent =
+                    data.status === 'error'
+                        ? 'Pipeline failed — check logs.'
+                        : `Last updated: ${data.last_updated}`;
+                if (data.status === 'done') loadResults();
+            }
+        }
+
+        async function loadResults() {
+            const res = await fetch('/api/results');
+            const data = await res.json();
+
+            document.getElementById('newCount').textContent = data.new_jobs.length;
+            document.getElementById('totalCount').textContent = data.total_jobs;
+            document.getElementById('companyCount').textContent = data.total_companies;
+
+            const list = document.getElementById('newJobsList');
+            if (data.new_jobs.length === 0) {
+                list.innerHTML = '<div class="empty">No new jobs since last run.</div>';
+                return;
+            }
+
+            // Group by company
+            const byCompany = {};
+            data.new_jobs.forEach(job => {
+                if (!byCompany[job.company]) byCompany[job.company] = [];
+                byCompany[job.company].push(job);
+            });
+
+            list.innerHTML = Object.entries(byCompany).map(([company, jobs]) => `
+                <div style="margin-bottom:16px;">
+                    <div style="color:#888;font-size:12px;margin-bottom:6px;">
+                        ${company} — ${jobs.length} new
+                    </div>
+                    ${jobs.map(job => `
+                        <div class="job-card">
+                            <div class="job-title">
+                                <a href="${job.url}" target="_blank">${job.title}</a>
+                                <span class="badge-new">NEW</span>
+                            </div>
+                            <div class="job-meta">${job.location || 'Location not specified'}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            `).join('');
+        }
+
+        // Load on page open
+        window.onload = async function() {
+            const res = await fetch('/api/status');
+            const data = await res.json();
+            if (data.status === 'done') {
+                document.getElementById('statusMsg').textContent =
+                    'Last updated: ' + data.last_updated;
+                loadResults();
+            }
+        }
+    </script>
+</body>
+</html>
