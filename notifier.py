@@ -68,7 +68,8 @@ def send_email(new_jobs):
     msg.attach(MIMEText(html, "html"))
 
     try:
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+        with smtplib.SMTP("smtp.gmail.com", 587) as server:
+            server.starttls()
             server.login(sender, password)
             server.sendmail(sender, recipient, msg.as_string())
         print(f">>> Email sent: {len(new_jobs)} new jobs")
