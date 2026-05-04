@@ -38,7 +38,7 @@ def run_pipeline():
 
 def start_scheduler():
     # 6pm CET = 17:00 UTC (adjust for daylight saving if needed)
-    schedule.every().day.at("17:00").do(run_pipeline)
+    schedule.every().day.at("16:00").do(run_pipeline) # set to 16:00 UTC to run at 18:00 CET during daylight saving time
     print(">>> Scheduler started — runs daily at 17:00 UTC (6pm CET)")
     while True:
         schedule.run_pending()
