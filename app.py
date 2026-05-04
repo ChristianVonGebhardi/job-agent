@@ -23,9 +23,9 @@ def run_pipeline():
     cache["status"] = "running"
     try:
         companies = fetch_companies()
-        results = fetch_all_companies(companies)
+        results, skipped = fetch_all_companies(companies)
         new_jobs = run_comparison(results)
-        send_email(new_jobs)
+        send_email(new_jobs, skipped)
         cache["new_jobs"] = new_jobs
         cache["all_jobs"] = results
         cache["last_updated"] = time.strftime("%Y-%m-%d %H:%M")

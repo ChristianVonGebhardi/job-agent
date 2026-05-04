@@ -4,8 +4,12 @@ from comparator import run_comparison
 from notifier import send_email
 
 companies = fetch_companies()
-results = fetch_all_companies(companies)
+results, skipped = fetch_all_companies(companies)
 new_jobs = run_comparison(results)
+
+print(f"\n=== SKIPPED ===")
+for s in skipped:
+    print(f"{s['company']}: {s['reason']} ({s['url']})")
 
 print(f"\n=== NEW JOBS ===")
 for job in new_jobs:

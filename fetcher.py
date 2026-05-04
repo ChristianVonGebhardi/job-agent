@@ -106,22 +106,28 @@ def fetch_jobs_from_url(company, url):
 def fetch_all_companies(companies):
     """
     companies: list of dicts with 'company' and 'url' keys
-    Returns: dict keyed by 'company|url' with job lists
+    Returns: dict keyed by 'company|url' with job lists and skipped entries
     """
     all_jobs = {}
+    skipped = []
 
     for entry in companies:
         company = (entry.get("company") or "").strip()
         url = (entry.get("url") or "").strip()
 
-        # Skip empty rows
         if not company and not url:
             continue
         if not company:
-            print(f"  Skipping row: missing company name (URL: {url})")
+            skipped.append({"company": "Unknown", "url": url, "reason": "missing company name"})
             continue
         if not url:
-            print(f"  Skipping {company}: missing URL")
+            skipped.append({"company": company, "url": "", "reason": "missing URL"})
+            continue
+
+        ats = detect_ats(url)
+        if ats in UNSUPPORTED_ATS or ats == "unknown":
+            skipped.append({"company": company, "url": url, "reason": f"unsupported ATS ({ats})"})
+            print(f"  Skipping {company}: unsupported ATS ({ats})")
             continue
 
         key = f"{company}|{url}"
@@ -132,4 +138,4 @@ def fetch_all_companies(companies):
             "jobs": fetch_jobs_from_url(company, url)
         }
 
-    return all_jobs
+    return all_jobs, skipped
