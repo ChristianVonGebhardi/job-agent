@@ -87,6 +87,17 @@ def test_email():
     send_email(test_jobs)
     return jsonify({"status": "attempted"})
 
+#debug endpoint to check the count of companies and jobs in the latest saved data
+#Open https://job-agent-production-201d.up.railway.app/api/debug/jobs-count in your browser to confirm the file exists and has data.
+@app.route("/api/debug/jobs-count")
+def jobs_count():
+    from comparator import load_previous
+    data = load_previous()
+    return jsonify({
+        "companies": len(data),
+        "total_jobs": sum(len(e["jobs"]) for e in data.values())
+    })
+
 if __name__ == "__main__":
     # Load existing results on startup
     previous = load_previous()
