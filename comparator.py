@@ -2,7 +2,7 @@ import json
 import os
 from datetime import datetime
 
-DATA_FILE = "data/jobs_latest.json"
+DATA_FILE = "/data/jobs_latest.json"
 
 def load_previous():
     if not os.path.exists(DATA_FILE):
@@ -11,7 +11,7 @@ def load_previous():
         return json.load(f)
 
 def save_current(data):
-    os.makedirs("data", exist_ok=True)
+    #os.makedirs("data", exist_ok=True) # remove the os.makedirs line since Railway manages the /data directory
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 

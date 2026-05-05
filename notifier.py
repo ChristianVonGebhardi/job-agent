@@ -24,6 +24,16 @@ def send_email(new_jobs, skipped=[]):
     # Build HTML
     html = "<h2>💼 Daily Job Report</h2>"
 
+    # Skipped section first, so it's more visible even with long lists of new jobs
+    if skipped:
+        html += "<hr><h3>⚠️ Requires Manual Check</h3>"
+        html += "<p style='color:#888;font-size:12px;'>These companies could not be processed automatically:</p>"
+        html += "<ul>"
+        for s in skipped:
+            url_part = f' — <a href="{s["url"]}">{s["url"]}</a>' if s["url"] else ""
+            html += f'<li><strong>{s["company"]}</strong> ({s["reason"]}){url_part}</li>'
+        html += "</ul>"
+
     if new_jobs:
         html += f"<p><strong>{len(new_jobs)} new job(s)</strong> found across {len(by_company)} company/companies.</p>"
         for company, jobs in by_company.items():
@@ -34,16 +44,6 @@ def send_email(new_jobs, skipped=[]):
             html += "</ul>"
     else:
         html += "<p>No new job postings since yesterday.</p>"
-
-    # Skipped section
-    if skipped:
-        html += "<hr><h3>⚠️ Requires Manual Check</h3>"
-        html += "<p style='color:#888;font-size:12px;'>These companies could not be processed automatically:</p>"
-        html += "<ul>"
-        for s in skipped:
-            url_part = f' — <a href="{s["url"]}">{s["url"]}</a>' if s["url"] else ""
-            html += f'<li><strong>{s["company"]}</strong> ({s["reason"]}){url_part}</li>'
-        html += "</ul>"
 
     html += f"<hr><p style='color:#aaa;font-size:11px;'>Job Agent — {__import__('time').strftime('%Y-%m-%d %H:%M UTC')}</p>"
 
